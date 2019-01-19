@@ -1,2 +1,4 @@
 # Mock & Test files
 *.pdf
+
+.serverless
