@@ -1,0 +1,9 @@
+service: expense-pdf-merger
+
+provider:
+  name: aws
+  runtime: python3.6
+
+functions:
+  expense-pdf-merger:
+    handler: index.handle
