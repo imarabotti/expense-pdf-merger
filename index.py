@@ -4,6 +4,7 @@ import boto3
 import uuid
 import re
 import sys
+import time
 
 from datetime import datetime
 from merger import merge_pdfs
@@ -16,29 +17,35 @@ def handle(event, context):
 
     #* Estos archivos no necesitan se mergeados
     excluded_filenames = [
-        'RECIBO',        # pdfs/admin_1/edif_2/expenses/4/RECIBO-DE-PAGO-URENA-RAEL-UF-5-UF-4-5A-4A-ENERO-2019.pdf
-        'COBRANZAS',     # pdfs/admin_1/edif_2/expenses/4/URENA-RAEL-HOJA-DE-COBRANZAS-MES-ENERO-2019.pdf
-        'account-status'  # pdfs/admin_1/edif_2/expenses/4.account-status.pdf
+        'RECIBO',
+        'COBRANZAS',
+        'account-status'
     ]
+
+    stop = False
 
     for filename in excluded_filenames:
         if re.search(filename, path):
-            sys.exit("No es necesario mergear")
+            stop = True
 
-    expense_id = get_expense_id(path)
-    account_status_path = get_account_status_path(path, expense_id)
+    if not stop:
+        expense_id = get_expense_id(path)
+        account_status_path = get_account_status_path(path, expense_id)
 
-    s3 = boto3.resource('s3')
+        s3 = boto3.resource('s3')
 
-    s3.Bucket(bucket).download_file(path, "/tmp/expense.pdf")
-    s3.Bucket(bucket).download_file(
-        account_status_path, "/tmp/account-status.pdf")
+        print(path)
+        print(account_status_path)
 
-    merge_pdfs()
-    add_footer()
+        s3.Bucket(bucket).download_file(path, "/tmp/expense.pdf")
 
-    client = boto3.client('s3')
-    client.upload_file("/tmp/merged_footer.pdf", bucket, path)
+        get_account_status_pdf(account_status_path, bucket, s3)
+
+        merge_pdfs()
+        add_footer()
+
+        client = boto3.client('s3')
+        client.upload_file("/tmp/merged_footer.pdf", bucket, path)
 
     return {
         'statusCode': '200',
@@ -63,12 +70,28 @@ def get_expense_id(path):
 def get_account_status_path(path, expense_id):
 
     path = path.split('/')
-    path.pop()
+    path.pop()  # saco el nombre
+    path.pop()  # saco la carpeta de la expensa
     path = '/'.join(path)
     path = path + '/' + expense_id + '.account-status.pdf'
 
     return path
 
 
-if __name__ == "__main__":
-    handle(None, None)
+counter = 0
+
+
+def get_account_status_pdf(path, bucket, s3):
+    global counter
+
+    if counter < 4:
+        try:
+            s3.Bucket(bucket).download_file(path, "/tmp/account-status.pdf")
+        except Exception as e:
+            time.sleep(5)
+            counter += 1
+            get_account_status_pdf(path, bucket, s3)
+
+            pass
+
+    return
