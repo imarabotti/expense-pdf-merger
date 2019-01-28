@@ -1,51 +1,47 @@
-import json
-import os
-import boto3
-import uuid
 import re
-import sys
 import time
+import json
 
-from datetime import datetime
-from merger import merge_pdfs
+import boto3
+from botocore import exceptions
+
 from add_footer import add_footer
+from merger import merge_pdfs
 
 
 def handle(event, context):
-    path = event['Records'][0]['s3']['object']['key']
-    bucket = event['Records'][0]['s3']['bucket']['name']
+    s3 = boto3.resource('s3')
+    
+    message = json.loads(event['Records'][0]['body'])
+    bucket = message['bucket']
+    
+    s3.Bucket(bucket).download_file(message['ruta'], "/tmp/expense.json")
+    json_data = json.loads(open("/tmp/expense.json").read())
 
-    #* Estos archivos no necesitan se mergeados
-    excluded_filenames = [
-        'RECIBO',
-        'COBRANZAS',
-        'account-status'
-    ]
+    path = json_data['ruta']
+    ruta_prorrateo = path + ".account-status.pdf"
 
-    stop = False
+    #* Lo dejo para loguear el merge
+    print(ruta_prorrateo)
 
-    for filename in excluded_filenames:
-        if re.search(filename, path):
-            stop = True
+    s3.Bucket(bucket).download_file(path, "/tmp/expense.pdf")
+    s3.Bucket(bucket).download_file(ruta_prorrateo, "/tmp/account-status.pdf")
 
-    if not stop:
-        expense_id = get_expense_id(path)
-        account_status_path = get_account_status_path(path, expense_id)
+    merge_pdfs()
+    add_footer()
 
-        s3 = boto3.resource('s3')
+    s3_client = boto3.client('s3')
+    s3_client.upload_file("/tmp/merged_footer.pdf", bucket, path)
 
-        print(path)
-        print(account_status_path)
+    s3_client.delete_object(Bucket=bucket, Key=ruta_prorrateo)
 
-        s3.Bucket(bucket).download_file(path, "/tmp/expense.pdf")
+    sqs_client = boto3.client('sqs')
 
-        get_account_status_pdf(account_status_path, bucket, s3)
-
-        merge_pdfs()
-        add_footer()
-
-        client = boto3.client('s3')
-        client.upload_file("/tmp/merged_footer.pdf", bucket, path)
+    sqs_client.send_message(
+        QueueUrl='https://sqs.us-west-2.amazonaws.com/730404845529/qa_finalize_expense_queue',
+        MessageBody=event['Records'][0]['body'],
+        DelaySeconds=0
+    )
 
     return {
         'statusCode': '200',
@@ -54,44 +50,3 @@ def handle(event, context):
             'Content-Type': 'application/json',
         },
     }
-
-
-def get_expense_id(path):
-    expense_id = None
-
-    for i in path.split('/'):
-        if (re.match(r'^[\d]$', i)):
-            expense_id = i
-            break
-
-    return expense_id
-
-
-def get_account_status_path(path, expense_id):
-
-    path = path.split('/')
-    path.pop()  # saco el nombre
-    path.pop()  # saco la carpeta de la expensa
-    path = '/'.join(path)
-    path = path + '/' + expense_id + '.account-status.pdf'
-
-    return path
-
-
-counter = 0
-
-
-def get_account_status_pdf(path, bucket, s3):
-    global counter
-
-    if counter < 4:
-        try:
-            s3.Bucket(bucket).download_file(path, "/tmp/account-status.pdf")
-        except Exception as e:
-            time.sleep(5)
-            counter += 1
-            get_account_status_pdf(path, bucket, s3)
-
-            pass
-
-    return
