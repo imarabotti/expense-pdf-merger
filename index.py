@@ -35,13 +35,14 @@ def handle(event, context):
 
     s3_client.delete_object(Bucket=bucket, Key=ruta_prorrateo)
 
-    sqs_client = boto3.client('sqs')
+    if message['tipo'] != 'borrador':
+        sqs_client = boto3.client('sqs')
 
-    sqs_client.send_message(
-        QueueUrl='https://sqs.us-west-2.amazonaws.com/730404845529/qa_finalize_expense_queue',
-        MessageBody=event['Records'][0]['body'],
-        DelaySeconds=0
-    )
+        sqs_client.send_message(
+            QueueUrl='https://sqs.us-west-2.amazonaws.com/730404845529/qa_finalize_expense_queue',
+            MessageBody=event['Records'][0]['body'],
+            DelaySeconds=0
+        )
 
     return {
         'statusCode': '200',
