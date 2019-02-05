@@ -45,7 +45,7 @@ def handle(event, context):
         )
 
     else:
-        s3_client.delete_object(Bucket=bucket, Key=path)
+        s3_client.delete_object(Bucket=bucket, Key=message['ruta'])
 
     return {
         'statusCode': '200',
