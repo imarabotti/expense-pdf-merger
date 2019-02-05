@@ -44,6 +44,9 @@ def handle(event, context):
             DelaySeconds=0
         )
 
+    else:
+        s3_client.delete_object(Bucket=bucket, Key=path)
+
     return {
         'statusCode': '200',
         'body': 'Done!',
