@@ -27,10 +27,10 @@ def add_footer():
             canvas.saveState()
             canvas.rotate(270)
             canvas.translate(-30, -A4[0] + 30)
-            canvas.drawRightString(-10, A4[0], "Página %d de %d" % (canvas._pageNumber, len(pages)))
+            canvas.drawRightString(-10, A4[0], "%d de %d" % (canvas._pageNumber, len(pages)))
             canvas.restoreState()
         else:
-            canvas.drawRightString(A4[0] - 60, 30, "Página %d de %d" % (canvas._pageNumber, len(pages)))
+            canvas.drawRightString(A4[0] - 60, 30, "%d de %d" % (canvas._pageNumber, len(pages)))
 
         canvas.showPage()
 
