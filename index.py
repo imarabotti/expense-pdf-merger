@@ -39,7 +39,7 @@ def handle(event, context):
         sqs_client = boto3.client('sqs')
 
         sqs_client.send_message(
-            QueueUrl='https://sqs.us-west-2.amazonaws.com/730404845529/qa_finalize_expense_queue',
+            QueueUrl='https://sqs.us-west-2.amazonaws.com/730404845529/prod_finalize_expense_queue',
             MessageBody=event['Records'][0]['body'],
             DelaySeconds=0
         )
