@@ -38,18 +38,7 @@ def handle(event, context):
         s3_client.upload_file("/tmp/merged_footer.pdf", bucket, json_data['ruta_impresion'])
 
     s3_client.delete_object(Bucket=bucket, Key=ruta_prorrateo)
-
-    if message['tipo'] != 'borrador':
-        sqs_client = boto3.client('sqs')
-
-        sqs_client.send_message(
-            QueueUrl=os.environ['FINALIZE_EXPENSE_QUEUE'],
-            MessageBody=event['Records'][0]['body'],
-            DelaySeconds=0
-        )
-
-    else:
-        s3_client.delete_object(Bucket=bucket, Key=message['ruta'])
+    s3_client.delete_object(Bucket=bucket, Key=path)
 
     return {
         'statusCode': '200',
