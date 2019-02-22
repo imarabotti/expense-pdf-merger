@@ -1,6 +1,7 @@
+import json
+import os
 import re
 import time
-import json
 
 import boto3
 from botocore import exceptions
@@ -33,13 +34,16 @@ def handle(event, context):
     s3_client = boto3.client('s3')
     s3_client.upload_file("/tmp/merged_footer.pdf", bucket, path)
 
+    if json_data['imprime']:
+        s3_client.upload_file("/tmp/merged_footer.pdf", bucket, json_data['ruta_impresion'])
+
     s3_client.delete_object(Bucket=bucket, Key=ruta_prorrateo)
 
     if message['tipo'] != 'borrador':
         sqs_client = boto3.client('sqs')
 
         sqs_client.send_message(
-            QueueUrl='https://sqs.us-west-2.amazonaws.com/730404845529/prod_finalize_expense_queue',
+            QueueUrl=os.environ['FINALIZE_EXPENSE_QUEUE'],
             MessageBody=event['Records'][0]['body'],
             DelaySeconds=0
         )
