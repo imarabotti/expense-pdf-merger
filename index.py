@@ -38,7 +38,7 @@ def handle(event, context):
         s3_client.upload_file("/tmp/merged_footer.pdf", bucket, json_data['ruta_impresion'])
 
     s3_client.delete_object(Bucket=bucket, Key=ruta_prorrateo)
-    s3_client.delete_object(Bucket=bucket, Key=path)
+    s3_client.delete_object(Bucket=bucket, Key=message['ruta'])
 
     return {
         'statusCode': '200',
