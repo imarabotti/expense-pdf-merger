@@ -21,11 +21,12 @@ def handle(event, context):
 
     path = json_data['ruta']
     ruta_prorrateo = path + ".account-status.pdf"
+    ruta_sin_prorrateo = path + '.sin-account-status.pdf'
 
     #* Lo dejo para loguear el merge
     print(ruta_prorrateo)
 
-    s3.Bucket(bucket).download_file(path, "/tmp/expense.pdf")
+    s3.Bucket(bucket).download_file(ruta_sin_prorrateo, "/tmp/expense.pdf")
     s3.Bucket(bucket).download_file(ruta_prorrateo, "/tmp/account-status.pdf")
 
     merge_pdfs()
@@ -38,6 +39,7 @@ def handle(event, context):
         s3_client.upload_file("/tmp/merged_footer.pdf", bucket, json_data['ruta_impresion'])
 
     s3_client.delete_object(Bucket=bucket, Key=ruta_prorrateo)
+    s3_client.delete_object(Bucket=bucket, Key=ruta_sin_prorrateo)
     s3_client.delete_object(Bucket=bucket, Key=message['ruta'])
 
     return {
