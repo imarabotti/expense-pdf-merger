@@ -11,12 +11,18 @@ from merger import merge_pdfs
 
 
 def handle(event, context):
+    time.sleep(60)
+
     s3 = boto3.resource('s3')
     
-    message = json.loads(event['Records'][0]['body'])
-    bucket = message['bucket']
+    bucket = event['Bucket']
     
-    s3.Bucket(bucket).download_file(message['ruta'], "/tmp/expense.json")
+    try:
+        s3.Bucket(bucket).download_file(event['Key'], "/tmp/expense.json")
+    except:
+        print("No encontre el archivo " + event['Key'])
+        return { 'statusCode' : '500' }
+
     json_data = json.loads(open("/tmp/expense.json").read())
 
     path = json_data['ruta']
@@ -40,7 +46,7 @@ def handle(event, context):
 
     s3_client.delete_object(Bucket=bucket, Key=ruta_prorrateo)
     s3_client.delete_object(Bucket=bucket, Key=ruta_sin_prorrateo)
-    s3_client.delete_object(Bucket=bucket, Key=message['ruta'])
+    s3_client.delete_object(Bucket=bucket, Key=event['Key'])
 
     return {
         'statusCode': '200',
